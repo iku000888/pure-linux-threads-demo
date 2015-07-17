@@ -1,12 +1,26 @@
+;conventional registers used for entering kernel mode.
+;       arch/ABI   instruction          syscall #   retval Notes
+;       ───────────────────────────────────────────────────────────────────
+;
+;       i386       int $0x80            eax         eax
+;       x86_64     syscall              rax         rax
+
+;conventional register mapping for syscall arguments
+;       arch/ABI   arg1   arg2   arg3   arg4   arg5   arg6   arg7
+;       ──────────────────────────────────────────────────────────
+;       i386       ebx    ecx    edx    esi    edi    ebp    -
+;       x86_64     rdi    rsi    rdx    r10    r8     r9     -
+
+
 ;; Pure assembly, library-free Linux threading demo
-bits 64
+bits 32
 global _start
 
 ;; sys/syscall.h
-%define SYS_write	1
-%define SYS_mmap	9
-%define SYS_clone	56
-%define SYS_exit	60
+%define SYS_write	4
+%define SYS_mmap	90
+%define SYS_clone	120
+%define SYS_exit	1
 
 ;; unistd.h
 %define STDIN		0
@@ -43,15 +57,15 @@ count:	dq MAX_LINES
 section .text
 _start:
 	; Spawn a few threads
-	mov rdi, threadfn
+	mov ebx, threadfn
 	call thread_create
-	mov rdi, threadfn
+	mov ebx, threadfn
 	call thread_create
 
 .loop:	call check_count
-	mov rdi, .hello
+	mov ebx, .hello
 	call puts
-	mov rdi, 0
+	mov ebx, 0
 	jmp .loop
 
 .hello:	db `Hello from \e[93;1mmain\e[0m!\n\0`
@@ -59,50 +73,50 @@ _start:
 ;; void threadfn(void)
 threadfn:
 	call check_count
-	mov rdi, .hello
+	mov ebx, .hello
 	call puts
 	jmp threadfn
 .hello:	db `Hello from \e[91;1mthread\e[0m!\n\0`
 
 ;; void check_count(void) -- may not return
 check_count:
-	mov rax, -1
-	lock xadd [count], rax
+	mov eax, -1
+	lock xadd [count], eax
 	jl .exit
 	ret
-.exit	mov rdi, 0
-	mov rax, SYS_exit
-	syscall
+.exit	mov ebx, 0
+	mov eax, SYS_exit
+	int 0x80
 
 ;; void puts(char *)
 puts:
-	mov rsi, rdi
-	mov rdx, -1
-.count:	inc rdx
-	cmp byte [rsi + rdx], 0
+	mov ecx, ebx
+	mov edx, -1
+.count:	inc edx
+	cmp byte [ecx + edx], 0
 	jne .count
-	mov rdi, STDOUT
-	mov rax, SYS_write
-	syscall
+	mov ebx, STDOUT
+	mov eax, SYS_write
+	int 0x80
 	ret
 
 ;; long thread_create(void (*)(void))
 thread_create:
-	push rdi
+	push ebx
 	call stack_create
-	lea rsi, [rax + STACK_SIZE - 8]
-	pop qword [rsi]
-	mov rdi, THREAD_FLAGS
-	mov rax, SYS_clone
-	syscall
+	lea ecx, [eax + STACK_SIZE - 8]
+	pop dword [ecx]
+	mov ebx, THREAD_FLAGS
+	mov eax, SYS_clone
+	int 0x80
 	ret
 
 ;; void *stack_create(void)
 stack_create:
-	mov rdi, 0
-	mov rsi, STACK_SIZE
-	mov rdx, PROT_WRITE | PROT_READ
-	mov r10, MAP_ANONYMOUS | MAP_PRIVATE | MAP_GROWSDOWN
-	mov rax, SYS_mmap
-	syscall
+	mov ebx, 0
+	mov ecx, STACK_SIZE
+	mov edx, PROT_WRITE | PROT_READ
+	mov esi, MAP_ANONYMOUS | MAP_PRIVATE | MAP_GROWSDOWN
+	mov eax, SYS_mmap
+	int 0x80
 	ret

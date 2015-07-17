@@ -10,6 +10,6 @@ clean :
 	$(RM) threads.o plain-threads
 
 %.o : %.s
-	$(NASM) -felf64 $(NASMFLAGS) -o $@ $^
+	$(NASM) -felf32 $(NASMFLAGS) -o $@ $^
 
 .PHONY : clean
