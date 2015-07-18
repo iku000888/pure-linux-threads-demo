@@ -18,7 +18,7 @@ global _start
 
 ;; sys/syscall.h
 %define SYS_write	4
-%define SYS_mmap	90
+%define SYS_mmap2	192
 %define SYS_clone	120
 %define SYS_exit	1
 
@@ -117,6 +117,6 @@ stack_create:
 	mov ecx, STACK_SIZE
 	mov edx, PROT_WRITE | PROT_READ
 	mov esi, MAP_ANONYMOUS | MAP_PRIVATE | MAP_GROWSDOWN
-	mov eax, SYS_mmap
+	mov eax, SYS_mmap2
 	int 0x80
 	ret
